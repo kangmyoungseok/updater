@@ -76,8 +76,9 @@ def get_timestamp(data_transaction,index):
 def check_rugpull(before_transaction_Eth, current_Eth):
   if ( Decimal(current_Eth) / Decimal(before_transaction_Eth) < 0.2 ):
     if(Decimal(current_Eth) / Decimal(before_transaction_Eth) < -0.0000001):
+        print("swap")
         return False
-    print('rugpull occur')
+#    print('rugpull occur')
     return True
   else:
     return False
