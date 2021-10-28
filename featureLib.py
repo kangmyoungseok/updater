@@ -1,5 +1,16 @@
 from decimal import Decimal
 
+def get_initial_Liquidity(token0_symbol,mint_data_transaction):
+  if(token0_symbol == 'WETH'):
+      initial_Liquidity_ETH = mint_data_transaction[0]['amount0']
+      initial_Liquidity_token = mint_data_transaction[0]['amount1']
+  else:
+      initial_Liquidity_ETH = mint_data_transaction[0]['amount1']
+      initial_Liquidity_token = mint_data_transaction[0]['amount0']
+
+  return initial_Liquidity_ETH,initial_Liquidity_token
+
+
 def get_mint_mean_period(mint_data_transaction,initial_timestamp):
     count = len(mint_data_transaction)
     if(count == 0):

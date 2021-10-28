@@ -23,6 +23,9 @@ def get_feature(data):
     swap_data_transaction = call_theGraph_swap(pair_address)
     burn_data_transaction = call_theGraph_burn(pair_address)
 
+    #initial_Liquidity 의 이더와 토큰 구하기
+    initial_Liquidity_Eth , initial_Liquidity_Token = get_initial_Liquidity(data['token0.symbol'],mint_data_transaction)
+
     # 각각의 count 구하기
     mint_count = len(mint_data_transaction)
     swap_count = len(swap_data_transaction)
@@ -51,6 +54,8 @@ def get_feature(data):
         rugpull_change = ''
 
     #데이터 저장
+    data['initial_Liquidity_Eth'] = initial_Liquidity_Eth
+    data['initial_Liquidity_Token'] = initial_Liquidity_Token   
     data['last_transaction_timestamp'] = last_timestamp
     data['last_transaction_date'] = datetime.datetime.fromtimestamp(int(last_timestamp)).strftime('%Y-%m-%d %H:%M:%S')
     data['mint_count'] = mint_count
@@ -68,7 +73,7 @@ def get_feature(data):
     data['before_rugpull_Eth'] = before_rugpull_Eth
     data['after_rugpull_Eth'] = after_rugpull_Eth
     data['rugpull_change'] = rugpull_change 
-    data['rugpull_proceeding_time'] = rugpull_proceeding_time / 86400
+    data['rugpull_proceeding_hour'] = str(rugpull_proceeding_time / 3600) + 'h'
     data['is_rugpull'] = is_rugpull
      
     return data
@@ -76,7 +81,7 @@ def get_feature(data):
 
 if __name__=='__main__':
     createFolder('./result')
-    file_name = './sample.csv'
+    file_name = './Pairs_v1.6.csv'
     file_count = split_csv(file_name)
     out_list = []
     out_list = list(input('입력(공백단위) : ').split())
