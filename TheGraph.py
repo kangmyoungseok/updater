@@ -103,7 +103,7 @@ if __name__=='__main__':
             p.join()
         except Exception as e:
             print(e)
-        print('=======')
+        print('===================================   finish    =========================================')
         time.sleep(5)
             
         df = pd.DataFrame(result)

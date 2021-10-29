@@ -85,11 +85,21 @@ def get_timestamp(data_transaction,index):
     return '99999999999'
 
 def check_rugpull(before_transaction_Eth, current_Eth):
-  if ( Decimal(current_Eth) / Decimal(before_transaction_Eth) < 0.2 ):
-    if(Decimal(current_Eth) < -0.1 or Decimal(before_transaction_Eth)< -0.1):
-        print("swap {current_Eth %s, befor_Eth : %s }: " %(str(current_Eth),str(before_transaction_Eth)))
-        return False
-#    print('rugpull occur')
+  if ( abs(Decimal(current_Eth) / Decimal(before_transaction_Eth)) < 0.2 ):
+ #    if(Decimal(current_Eth) < -0.1 or Decimal(before_transaction_Eth)< -0.1):
+ #        print("swap {current_Eth %s, befor_Eth : %s }: " %(str(current_Eth),str(before_transaction_Eth)))
+ #        return False
+ #    print('rugpull occur')
+    return True
+  else:
+    return False
+
+def is_MEV(before_transaction_Eth, current_Eth, MEV_state):
+  if(MEV_state == True):
+    return True
+
+  if( abs(Decimal(current_Eth) / Decimal(before_transaction_Eth))> 5 ):    #Swap으로 했는데 기존 유동성 풀에 있는 이더보다 5배이상의 양을 스왑하는 경우
+    print('MEV in [ before : %s, after : %s ]'%(str(before_transaction_Eth),str(current_Eth)))
     return True
   else:
     return False
@@ -116,14 +126,30 @@ def get_rugpull_timestamp(mint_data_transaction,swap_data_transaction,burn_data_
     while True:
       try:  
         next_timestamp = min(get_timestamp(mint_data_transaction,i),get_timestamp(burn_data_transaction,k))
-
+        MEV_state = False
         #swap 인 경우 current_Eth 더하는 로직 / 러그풀 타임스탬프 체크
+        MEV_count = 0
         while(get_timestamp(swap_data_transaction,j) < next_timestamp ):
           #swap이 제일 타임스탬프가 작은 경우니까 스왑에 맞게 amount +-를 하면 된다.
+          
           before_transaction_Eth = current_Liquidity_Eth
           current_Liquidity_Eth = current_Liquidity_Eth + get_swap_amount(swap_data_transaction,j,eth_amountIn,eth_amountOut)
+ #          print("swap {before : %s swap_amount : %s"%(str(before_transaction_Eth),str(current_Liquidity_Eth-before_transaction_Eth)))
+          MEV_state = is_MEV(before_transaction_Eth,current_Liquidity_Eth,MEV_state)
+          if(MEV_state):
+            print('MEV_State True { before : %s, after : %s count : %s' % (str(before_transaction_Eth),str(current_Liquidity_Eth),str(MEV_count)))
+            MEV_count = MEV_count +1
+            if(MEV_count >7 and current_Liquidity_Eth < 10):
+              MEV_state = False
+              MEV_count = 0
           if(check_rugpull(before_transaction_Eth,current_Liquidity_Eth)):
-            return get_timestamp(swap_data_transaction,j), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'swap'
+            if(MEV_state == True):
+              print('MEV Exit [ before : %s, after : %s ]'%(str(before_transaction_Eth),str(current_Liquidity_Eth)))
+              MEV_state = False
+              MEV_count = 0
+            else:
+              if(Decimal(before_transaction_Eth) > 0 and Decimal(current_Liquidity_Eth) > 0):
+                return get_timestamp(swap_data_transaction,j), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'swap'
           j = j+1
 
         #mint 인 경우 curruent_Eth 더하는 로직
@@ -152,7 +178,7 @@ def get_rugpull_timestamp(mint_data_transaction,swap_data_transaction,burn_data_
         else:
           before_transaction_Eth = current_Liquidity_Eth
           current_Liquidity_Eth = current_Liquidity_Eth - Decimal(burn_data_transaction[k][eth_amount])
-  #        print('burn : ' + str(current_Liquidity_Eth))
+ #         print("burn {before : %s burn_amount : %s"%(str(before_transaction_Eth),str(current_Liquidity_Eth-before_transaction_Eth)))
           if(check_rugpull(before_transaction_Eth,current_Liquidity_Eth)):
             return get_timestamp(burn_data_transaction,k), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'burn'
           k = k+1
