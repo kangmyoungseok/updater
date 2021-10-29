@@ -86,8 +86,8 @@ def get_timestamp(data_transaction,index):
 
 def check_rugpull(before_transaction_Eth, current_Eth):
   if ( Decimal(current_Eth) / Decimal(before_transaction_Eth) < 0.2 ):
-    if(Decimal(current_Eth) / Decimal(before_transaction_Eth) < -0.0000001):
-        print("swap")
+    if(Decimal(current_Eth) < -0.1 or Decimal(before_transaction_Eth)< -0.1):
+        print("swap {current_Eth %s, befor_Eth : %s }: " %(str(current_Eth),str(before_transaction_Eth)))
         return False
 #    print('rugpull occur')
     return True
@@ -114,50 +114,51 @@ def get_rugpull_timestamp(mint_data_transaction,swap_data_transaction,burn_data_
     current_Liquidity_Eth = 0
     i,j,k = 0,0,0   #mint,swap,burn 배열의 인덱스
     while True:
-        
-      next_timestamp = min(get_timestamp(mint_data_transaction,i),get_timestamp(burn_data_transaction,k))
+      try:  
+        next_timestamp = min(get_timestamp(mint_data_transaction,i),get_timestamp(burn_data_transaction,k))
 
-      #swap 인 경우 current_Eth 더하는 로직 / 러그풀 타임스탬프 체크
-      while(get_timestamp(swap_data_transaction,j) < next_timestamp ):
-        #swap이 제일 타임스탬프가 작은 경우니까 스왑에 맞게 amount +-를 하면 된다.
-        before_transaction_Eth = current_Liquidity_Eth
-        current_Liquidity_Eth = current_Liquidity_Eth + get_swap_amount(swap_data_transaction,j,eth_amountIn,eth_amountOut)
-#        print('swap : ' + str(current_Liquidity_Eth))
-        if(check_rugpull(before_transaction_Eth,current_Liquidity_Eth)):
-          return get_timestamp(swap_data_transaction,j), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'swap'
-        j = j+1
+        #swap 인 경우 current_Eth 더하는 로직 / 러그풀 타임스탬프 체크
+        while(get_timestamp(swap_data_transaction,j) < next_timestamp ):
+          #swap이 제일 타임스탬프가 작은 경우니까 스왑에 맞게 amount +-를 하면 된다.
+          before_transaction_Eth = current_Liquidity_Eth
+          current_Liquidity_Eth = current_Liquidity_Eth + get_swap_amount(swap_data_transaction,j,eth_amountIn,eth_amountOut)
+          if(check_rugpull(before_transaction_Eth,current_Liquidity_Eth)):
+            return get_timestamp(swap_data_transaction,j), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'swap'
+          j = j+1
 
-      #mint 인 경우 curruent_Eth 더하는 로직
-      if(next_timestamp == get_timestamp(mint_data_transaction,i)): #mint가 최소라면, + 한다.
-        if(next_timestamp == '99999999999'):  #이건 rugpull이 없는 경우
-          try:
-              #여기까지 온거면 rugpull이 없는 경우인데 이때 네가지 케이스에 대한 예외케이스를 정의 해야한다.
-              #Case 1 Swap/Burn이 없는 경우
-              if(swap_count == 0 and burn_count == 0):
-                  return mint_data_transaction[-1]['timestamp'],0, False, 0,0,''
-              #Case 2 Swap이 없는 경우 
-              if(swap_count == 0):
-                  return max(mint_data_transaction[-1]['timestamp'],burn_data_transaction[-1]['timestamp']),0,False, 0,0,''
-              #Case 3 Burn이 없는 경우
-              if(burn_count == 0):
-                  return max(mint_data_transaction[-1]['timestamp'],swap_data_transaction[-1]['timestamp']),0,False, 0,0,''
-              #Case 4 Mint/Swap/Burn이 다 있지만, Rugpull이 아닌 경우
-              return max(mint_data_transaction[-1]['timestamp'],burn_data_transaction[-1]['timestamp'],swap_data_transaction[-1]['timestamp']),0,False, 0,0,''
-          except:
-            return 'Error occur',100.0,False,1,1
-        before_transaction_Eth = current_Liquidity_Eth
-        current_Liquidity_Eth = current_Liquidity_Eth + Decimal(mint_data_transaction[i][eth_amount]) 
-#        print(current_Liquidity_Eth)
-        i = i+1
+        #mint 인 경우 curruent_Eth 더하는 로직
+        if(next_timestamp == get_timestamp(mint_data_transaction,i)): #mint가 최소라면, + 한다.
+          if(next_timestamp == '99999999999'):  #이건 rugpull이 없는 경우
+            try:
+                #여기까지 온거면 rugpull이 없는 경우인데 이때 네가지 케이스에 대한 예외케이스를 정의 해야한다.
+                #Case 1 Swap/Burn이 없는 경우
+                if(swap_count == 0 and burn_count == 0):
+                    return mint_data_transaction[-1]['timestamp'],0, False, 0,0,''
+                #Case 2 Swap이 없는 경우 
+                if(swap_count == 0):
+                    return max(mint_data_transaction[-1]['timestamp'],burn_data_transaction[-1]['timestamp']),0,False, 0,0,''
+                #Case 3 Burn이 없는 경우
+                if(burn_count == 0):
+                    return max(mint_data_transaction[-1]['timestamp'],swap_data_transaction[-1]['timestamp']),0,False, 0,0,''
+                #Case 4 Mint/Swap/Burn이 다 있지만, Rugpull이 아닌 경우
+                return max(mint_data_transaction[-1]['timestamp'],burn_data_transaction[-1]['timestamp'],swap_data_transaction[-1]['timestamp']),0,False, 0,0,''
+            except:
+              return 'Error occur',100.0,False,1,1
+          before_transaction_Eth = current_Liquidity_Eth
+          current_Liquidity_Eth = current_Liquidity_Eth + Decimal(mint_data_transaction[i][eth_amount]) 
+          i = i+1
 
-      #burn 인 경우 current_Eth 빼는 로직 / 러그풀 타임스탬프 체
-      else:
-        before_transaction_Eth = current_Liquidity_Eth
-        current_Liquidity_Eth = current_Liquidity_Eth - Decimal(burn_data_transaction[k][eth_amount])
-#        print('burn : ' + str(current_Liquidity_Eth))
-        if(check_rugpull(before_transaction_Eth,current_Liquidity_Eth)):
-          return get_timestamp(burn_data_transaction,k), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'burn'
-        k = k+1
+        #burn 인 경우 current_Eth 빼는 로직 / 러그풀 타임스탬프 체
+        else:
+          before_transaction_Eth = current_Liquidity_Eth
+          current_Liquidity_Eth = current_Liquidity_Eth - Decimal(burn_data_transaction[k][eth_amount])
+  #        print('burn : ' + str(current_Liquidity_Eth))
+          if(check_rugpull(before_transaction_Eth,current_Liquidity_Eth)):
+            return get_timestamp(burn_data_transaction,k), Decimal(current_Liquidity_Eth / before_transaction_Eth) -1, True, before_transaction_Eth,current_Liquidity_Eth,'burn'
+          k = k+1
+      except Exception as e:
+        print('Critical Error Occur')
+        return '1',0,False,1,1,'Error'
 
 def token_index(data):
     if(data['token0.name'] == 'Wrapped Ether'):
