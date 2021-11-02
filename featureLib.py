@@ -100,7 +100,7 @@ def get_timestamp(data_transaction,index):
     return '99999999999'
 
 def check_rugpull(before_transaction_Eth, current_Eth):
-  if ( abs(Decimal(current_Eth) / Decimal(before_transaction_Eth)) < 0.2 ):
+  if ( abs(Decimal(current_Eth) / Decimal(before_transaction_Eth)) <= 0.01 ):
     if( Decimal(before_transaction_Eth) < 0 or Decimal(current_Eth) < 0): #순서가 바뀐 경우에 의해서 풀의 이더가 음수인 경우 그냥 exit
       return False
     else:
