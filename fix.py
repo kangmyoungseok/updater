@@ -108,7 +108,7 @@ if __name__=='__main__':
         switch_file(file_name)
         datas_len = len(datas)
         try:
-            p = Pool(1)
+            p = Pool(4)
             count = 0
             result = []
             for ret in p.imap(get_feature,datas):
