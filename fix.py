@@ -8,6 +8,7 @@ from mylib import *
 from TheGraphLib import *
 from featureLib import *
 import datetime
+from decimal import Decimal
 
 def switch_file(file_name):
     global datas
@@ -45,16 +46,29 @@ def get_feature(data):
     #SwapIn/SwapOut 비율
     swapIn,swapOut = swap_IO_rate(swap_data_transaction,token_index(data))    
 
-    #rugpull timestamp , 러그풀 시점에서 유동성 풀에 있는 이더 변화량(rugpull timestamp / change)
-    rugpull_timestamp, rugpull_change, is_rugpull, before_rugpull_Eth, after_rugpull_Eth,rugpull_method = get_rugpull_timestamp(mint_data_transaction,swap_data_transaction,burn_data_transaction,token_index(data))
-
-    #rugpull 이 시작부터 끝날때까지 경과한 시간
-    rugpull_proceeding_time = int(rugpull_timestamp) - int(initial_timestamp)
-    if(is_rugpull == False):
+    #현재/초기 유동성 변화가 99%이상 감소한 애들에 대해서만 이거 검사한다.
+    if( Decimal(data['current_Eth']) / Decimal(initial_Liquidity_Eth) <= 0.01 ):
+        #rugpull timestamp , 러그풀 시점에서 유동성 풀에 있는 이더 변화량(rugpull timestamp / change)
+        rugpull_timestamp, rugpull_change, is_rugpull, before_rugpull_Eth, after_rugpull_Eth,rugpull_method = get_rugpull_timestamp(mint_data_transaction,swap_data_transaction,burn_data_transaction,token_index(data))
+        
+        #rugpull 이 시작부터 끝날때까지 경과한 시간
+        rugpull_proceeding_time = int(rugpull_timestamp) - int(initial_timestamp)
+        
+        #swap이나 Burn이 한번에 99퍼센트 감소한적이 없는 경우
+        if(is_rugpull == False):
+            rugpull_proceeding_time = 0
+            rugpull_method = ''
+            rugpull_timestamp = '0'
+            rugpull_change = ''
+    else:
+        before_rugpull_Eth = '0'
+        after_rugpull_Eth = '0'
         rugpull_proceeding_time = 0
         rugpull_method = ''
         rugpull_timestamp = '0'
         rugpull_change = ''
+        is_rugpull = False
+
 
     #데이터 저장
     data['initial_Liquidity_Eth'] = initial_Liquidity_Eth
